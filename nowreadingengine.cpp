@@ -6,8 +6,7 @@
 #include <QtCore/QFile>
 #include <QtCore/QStringList>
 #include <QtCore/QVariant>
-#include <QtXml/QXmlDefaultHandler>
-#include <QtXml/QXmlSimpleReader>
+#include <QtCore/QXmlStreamReader>
 
 #include <syslog.h>
 
@@ -21,33 +20,6 @@ NowReadingEngine::NowReadingEngine(QObject *parent, const QVariantList& args) :
     Q_UNUSED(args);
 
 }
-
-class OkularXMLNowReadingHandler : public QXmlDefaultHandler {
-public:
-    bool startElement(const QString &, const QString &localName, const QString &, const QXmlAttributes &atts) {
-        if (localName == "documentInfo") {
-            m_path = atts.value("url");
-        } else if (localName == "current") {
-            m_viewport = atts.value("viewport");
-        }
-        return true;
-    }
-
-    bool fatalError(const QXmlParseException &) {
-        return false;
-    }
-
-    QString getPath() const {
-        return m_path;
-    }
-
-    QString getViewport() const {
-        return m_viewport;
-    }
-private:
-    QString m_path;
-    QString m_viewport;
-};
 
 struct NowReadingEntry {
     QString path;
@@ -64,20 +36,25 @@ bool convertOkularXMLFileToEntry(const QString &okularFilePath, NowReadingEntry 
     if (!okularFile.open(QFile::ReadOnly))
         return false;
 
-    QXmlSimpleReader reader;
-    QXmlInputSource source(&okularFile);
-    OkularXMLNowReadingHandler myHandler;
-    reader.setErrorHandler(&myHandler);
-    reader.setContentHandler(&myHandler);
-    reader.parse(source);
+    QXmlStreamReader xml(&okularFile);
+    QString vp;
+
+    while (!xml.atEnd()) {
+        if (QXmlStreamReader::StartElement != xml.readNext())
+            continue;
+        if (xml.name() == "documentInfo") {
+            outEntry.path = xml.attributes().value("url").toString();
+        }
+        else if (xml.name() == "current") {
+            vp = xml.attributes().value("viewport").toString();
+            break;
+        }
+    }
 
     /* get PDF file path: */
-    outEntry.path = myHandler.getPath();
+
     if (outEntry.path.isEmpty())
         return false;
-
-    /* get saved viewport for most recent entry: */
-    QString vp = myHandler.getViewport();
 
     /* get the page number from viewport string: */
     QStringList tokens = vp.split(";");
