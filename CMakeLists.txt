@@ -10,17 +10,20 @@ include(${QT_USE_FILE})
 # kde dependencies
 find_package(KDE4 REQUIRED)
 include(KDE4Defaults)
-include_directories(${KDE4_INCLUDES})
+
+include_directories(${KDE4_INCLUDES} ${POPPLER_QT4_INCLUDE_DIR})
+
+find_package(PopplerQt4 REQUIRED)
 
 # our files:
 set(nowreading_SRCS nowreadingengine.cpp)
 
 kde4_add_plugin(plasma_engine_nowreading ${nowreading_SRCS})
 target_link_libraries(plasma_engine_nowreading
-                      ${KDE4_PLASMA_LIBS} ${KDE4_KDEUI_LIBS} ${QT_LIBRARIES})
+                      ${KDE4_PLASMA_LIBS} ${KDE4_KDEUI_LIBS} ${QT_LIBRARIES} ${POPPLER_QT4_LIBRARIES})
 
 kde4_add_executable(main ${nowreading_SRCS})
-target_link_libraries(main ${KDE4_PLASMA_LIBS} ${KDE_KDEUI_LIBS} ${QT_LIBRARIES})
+target_link_libraries(main ${KDE4_PLASMA_LIBS} ${KDE_KDEUI_LIBS} ${QT_LIBRARIES} ${POPPLER_QT4_LIBRARIES})
 
 install(TARGETS plasma_engine_nowreading
         DESTINATION ${PLUGIN_INSTALL_DIR})

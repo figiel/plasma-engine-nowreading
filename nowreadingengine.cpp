@@ -2,13 +2,12 @@
 
 #include <KDE/KStandardDirs>
 
-#include <QtGui/QApplication>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
 #include <QtCore/QStringList>
 #include <QtCore/QVariant>
-#include <QtXmlPatterns/QXmlQuery>
-#include <QtXmlPatterns/QXmlResultItems>
+#include <QtXml/QXmlDefaultHandler>
+#include <QtXml/QXmlSimpleReader>
 
 #include <syslog.h>
 
@@ -23,55 +22,62 @@ NowReadingEngine::NowReadingEngine(QObject *parent, const QVariantList& args) :
 
 }
 
+class OkularXMLNowReadingHandler : public QXmlDefaultHandler {
+public:
+    bool startElement(const QString &, const QString &localName, const QString &, const QXmlAttributes &atts) {
+        if (localName == "documentInfo") {
+            m_path = atts.value("url");
+        } else if (localName == "current") {
+            m_viewport = atts.value("viewport");
+        }
+        return true;
+    }
+
+    bool fatalError(const QXmlParseException &) {
+        return false;
+    }
+
+    QString getPath() const {
+        return m_path;
+    }
+
+    QString getViewport() const {
+        return m_viewport;
+    }
+private:
+    QString m_path;
+    QString m_viewport;
+};
+
 struct NowReadingEntry {
     QString path;
     uint currentPage;
     uint totalPages;
 };
 
-namespace {
-QString getAttributeValueFromXML(const QString &xpath, QIODevice &file)
-{
-    QString ret("");
-    QXmlQuery query(QXmlQuery::XQuery10);
-    query.setFocus(&file);
-    query.setQuery(xpath);
 
-    if (!query.isValid())
-        return ret;
-
-    QXmlResultItems results;
-    query.evaluateTo(&results);
-
-    QXmlItem result(results.next());
-
-    if (result.isNode())
-        cout << "is Null" << endl;
-
-    if (!result.isNull() && result.isAtomicValue() && result.toAtomicValue().isValid())
-        ret = result.toAtomicValue().toString();
-
-    return ret;
-
-}
-} // namespace
-
-bool convertOkularXMLFileToEntry(const QString &okularFile, NowReadingEntry &outEntry)
+bool convertOkularXMLFileToEntry(const QString &okularFilePath, NowReadingEntry &outEntry)
 {
     /* open the Okular document history file */
-    QFile xmlFile(okularFile);
-    if (!xmlFile.open(QFile::ReadOnly))
+
+    QFile okularFile(okularFilePath);
+    if (!okularFile.open(QFile::ReadOnly))
         return false;
 
+    QXmlSimpleReader reader;
+    QXmlInputSource source(&okularFile);
+    OkularXMLNowReadingHandler myHandler;
+    reader.setErrorHandler(&myHandler);
+    reader.setContentHandler(&myHandler);
+    reader.parse(source);
+
     /* get PDF file path: */
-    outEntry.path = getAttributeValueFromXML("//documentInfo/attribute::url/data(.)", xmlFile);
+    outEntry.path = myHandler.getPath();
     if (outEntry.path.isEmpty())
         return false;
 
-    xmlFile.reset();
-
     /* get saved viewport for most recent entry: */
-    QString vp = getAttributeValueFromXML("//documentInfo/generalInfo/history/current/attribute::viewport/data(.)", xmlFile);
+    QString vp = myHandler.getViewport();
 
     /* get the page number from viewport string: */
     QStringList tokens = vp.split(";");
@@ -87,7 +93,7 @@ bool convertOkularXMLFileToEntry(const QString &okularFile, NowReadingEntry &out
     return true;
 }
 
-QStringList getOkularConfigurationFiles()
+QStringList getOkularXMLFiles()
 {
     QStringList ret;
     QDir okularHistoryDir (KStandardDirs::locateLocal( "data", "okular/docdata/" ));
@@ -105,10 +111,7 @@ QStringList getOkularConfigurationFiles()
 }
 
 int main(int argc, char **argv) {
-
-    QApplication app(argc, argv);
-
-    QStringList okularFiles = getOkularConfigurationFiles();
+    QStringList okularFiles = getOkularXMLFiles();
     QStringList::const_iterator it = okularFiles.constBegin();
 
     for ( ; it != okularFiles.constEnd(); ++it) {
@@ -119,7 +122,6 @@ int main(int argc, char **argv) {
     }
 
 }
-
 
 
 void NowReadingEngine::init()
