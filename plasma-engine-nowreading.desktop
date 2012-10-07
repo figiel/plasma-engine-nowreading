@@ -1,0 +1,18 @@
+[Desktop Entry]
+Name=Now Reading Data Engine
+Comment=A data engine for use by Plasma Applets. Provides information about recently read documents with Okular.
+Type=Service
+
+X-KDE-ServiceTypes=Plasma/DataEngine
+X-KDE-Library=plasma_engine_nowreading
+X-Plasma-EngineName=nowreading
+X-KDE-PluginInfo-Author=Piotr Figiel
+X-KDE-PluginInfo-Email=figiel+bugs.kde.org@gmail.com
+X-KDE-PluginInfo-Name=nowreading
+X-KDE-PluginInfo-Version=0.1
+X-KDE-PluginInfo-Website=http://github.com/figiel/nowreading
+X-KDE-PluginInfo-Category=Education
+X-KDE-PluginInfo-Depends=
+X-KDE-PluginInfo-License=BSD
+X-KDE-PluginInfo-EnabledByDefault=true
+
