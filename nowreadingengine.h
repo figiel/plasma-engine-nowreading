@@ -57,7 +57,7 @@ private:
     typedef QMap<QString, NowReadingEntry> DataModel;
     DataModel _dataModel;
     enum {
-        MaxDataModelSize = 2,
+        MaxDataModelSize = 10,
         PollingInterval = 2000
     };
 
