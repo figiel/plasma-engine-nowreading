@@ -19,20 +19,50 @@
   * Single document is represented as single source, name of the source is the filename.
   *
   * For single source there are following data available:
-  *  currentPage  - number of page the reader is currently on
-  *  totalPages   - number of pages the document has
+  *  currentPage  - number of page the reader is currently on,
+  *  totalPages   - number of pages the document has,
+  *  accessTime   - document access time, which is actually last modification time of the Okular history file.
   *
   */
+
+namespace nowreading {
+
+/** \class NowReadingEntry
+    \brief Single entry which will be provided to presentation layer describing recently read document. */
+struct NowReadingEntry {
+    QString path;          /** Path to the document which is read */
+    uint currentPage;      /** Current page the user was at, when last closing the Okular session */
+    uint totalPages;       /** Total pages of the document */
+    QDateTime accessTime;  /** Document access time, which is actually last modification time of the Okular history file. */
+
+    bool operator < (const NowReadingEntry &other) const
+    {
+        // From the most recent to the oldest
+        return accessTime > other.accessTime;
+    }
+};
+
 class NowReadingEngine : public Plasma::DataEngine
 {
     Q_OBJECT
 public:
     NowReadingEngine(QObject *parent, const QVariantList& args);
     void init();
-signals:
-    
 public slots:
-    
+    void update();
+signals:
+
+private:
+    /** Map of known now reading entries, indexed by the Okular history filename. */
+    typedef QMap<QString, NowReadingEntry> DataModel;
+    DataModel _dataModel;
+    enum {
+        MaxDataModelSize = 2,
+        PollingInterval = 2000
+    };
+
 };
 
-#endif // NOWREADINGENGINE_H
+} /* namespace nowreading */
+
+#endif /* NOWREADINGENGINE_H */
